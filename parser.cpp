@@ -26,10 +26,11 @@
 #include <regex>
 #include <map>
 #include <algorithm>
+#include <iostream>
 
-std::string const enclosure_pattern = "<enclosure.+url=.+(http.+/(.+\\.(mp3|m4a|mp4|ogg|oga|aac|flac|wma|wmv|mpg|mpeg|avi|m4v|mov|ac3|pcm|wav|alac))).+/\\>";
+std::string const enclosure_pattern = "<enclosure.+url=.+(http.+/(.+\\.(mp3|m4a|mp4|ogg|oga|aac|flac|wma|wmv|mpg|mpeg|avi|m4v|mov|ac3|pcm|wav|alac))([^ \\\"]+)?)\\\" .+/\\>";
 std::string const title_pattern = "<title>(.+)</title>";
-std::string const start_tag = "<item>";
+std::string const start_tag = "<item";
 std::string const end_tag = "</item>";
 std::size_t const end_len = end_tag.length();
 
@@ -377,6 +378,9 @@ std::map<std::string, std::string> html_entities
 };
 
 std::list<Podcast> Parser::get_items(std::string xml) {
+    std::replace( xml.begin(), xml.end(), '\n', ' ');
+    std::replace( xml.begin(), xml.end(), '\r', ' ');
+
     std::list<Podcast> podcasts;
     auto spos = xml.find(start_tag);
     auto epos = xml.find(end_tag);
@@ -390,7 +394,7 @@ std::list<Podcast> Parser::get_items(std::string xml) {
         std::regex rgxTitle(title_pattern);
         std::smatch matchEnclosure;
         std::smatch matchTitle;
-        
+
         //URL, Name, Extension
         if (std::regex_search(item, matchEnclosure, rgxEnclosure)) {
             url = matchEnclosure.str(1);
@@ -403,7 +407,8 @@ std::list<Podcast> Parser::get_items(std::string xml) {
             title = matchTitle.str(1);
         }
         
-        if (!url.empty() && !name.empty() && !ext.empty() && !title.empty()) {
+        //if (!url.empty() && !name.empty() && !ext.empty() && !title.empty()) {
+        if (!url.empty()) {
             auto podcast = Podcast();
             podcast.url = url;
             podcast.name = decode_html(name);
