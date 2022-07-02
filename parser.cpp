@@ -28,7 +28,7 @@
 #include <algorithm>
 #include <iostream>
 
-std::string const enclosure_pattern = "<enclosure.+url=.+(http.+/(.+\\.(mp3|m4a|mp4|ogg|oga|aac|flac|wma|wmv|mpg|mpeg|avi|m4v|mov|ac3|pcm|wav|alac))([^ \\\"]+)?)\\\" .+/\\>";
+std::string const enclosure_pattern = "<enclosure.+url=.+((https\\:|http\\:).+/(.+\\.(mp3|m4a|mp4|ogg|oga|aac|flac|wma|wmv|mpg|mpeg|avi|m4v|mov|ac3|pcm|wav|alac)?)([^ \\\"]+)?)\\\" .+/\\>";
 std::string const title_pattern = "<title>(.+)</title>";
 std::string const start_tag = "<item";
 std::string const end_tag = "</item>";
@@ -399,7 +399,7 @@ std::list<Podcast> Parser::get_items(std::string xml) {
         if (std::regex_search(item, matchEnclosure, rgxEnclosure)) {
             url = matchEnclosure.str(1);
             name = matchEnclosure.str(2);
-            ext = matchEnclosure.str(3);
+            ext = matchEnclosure.str(4);
         }
         
         //Title

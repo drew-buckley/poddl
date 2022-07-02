@@ -29,6 +29,7 @@
 #include <string>
 #include <list>
 #include <errno.h>
+#include <map>
 #include "fs.hpp"
 #include "client.hpp"
 #include "parser.hpp"
@@ -59,6 +60,18 @@ bool create_directory_if_not_exists(std::string path) {
         }
     }
     return true;
+}
+
+std::size_t count_remaining_downloads(const std::map<Podcast, bool>& item_download_map) {
+    std::size_t remaining_count = 0;
+    for (const auto& kvp : item_download_map) {
+        auto downloaded = kvp.second;
+        if (!downloaded) {
+            remaining_count++;
+        }
+    }
+
+    return remaining_count;
 }
 
 int main(int argc, const char *argv[]) {
@@ -114,30 +127,48 @@ int main(int argc, const char *argv[]) {
     std::cout << "Downloading " << size << " files" << std::endl;
     int count = 1;
             
+    std::map<Podcast, bool> item_download_map;
     for (auto const& item : items) {
-        std::string const filePath = path + "/" + item.title + "." + item.ext;
-        std::string const tempFilePath = tempPath + "/" + item.title + "." + item.ext;
+        item_download_map[item] = false;
+    }
 
-        if (FileSystem::file_exists(filePath)) {
-            std::cout << "Skipping file " << filePath << std::endl;
-            continue;
-        }
+    std::size_t remaining_count;
+    while ((remaining_count = count_remaining_downloads(item_download_map)) > 0) {
+        std::cout << "*************************************" << std::endl;
+        std::cout << "Remaining files: " << remaining_count << "/" << items.size() << std::endl;
+        std::cout << "*************************************" << std::endl << std::endl;
+        for (auto const& item : items) {
+            if (!item_download_map[item])
+            {
+                std::string const filePath = path + "/" + item.title + "." + item.ext;
+                std::string const tempFilePath = tempPath + "/" + item.title + "." + item.ext;
 
-        std::ofstream fs(tempFilePath, std::ostream::binary);
+                if (FileSystem::file_exists(filePath)) {
+                    std::cout << "Skipping file " << filePath << std::endl;
+                    continue;
+                }
 
-        if (client.write_file_stream(item.url, fs)) {
-            fs.close();
-            std::cout << "Downloaded file " << count << "/" << size << " " << item.title << std::endl;
+                std::ofstream fs(tempFilePath, std::ostream::binary);
 
-            if (!FileSystem::move_file(tempFilePath, filePath)) {
-                std::cout << "Error moving temp file. I'm out. " << filePath << std::endl;
-                return -1;
+                if (client.write_file_stream(item.url, fs)) {
+                    fs.close();
+                    std::cout << "Downloaded file " << count << "/" << size << " " << item.title << std::endl;
+                    item_download_map[item] = true;
+
+                    if (!FileSystem::move_file(tempFilePath, filePath)) {
+                        std::cout << "Error moving temp file. I'm out. " << filePath << std::endl;
+                        return -1;
+                    }
+                } else {
+                    std::cout << "Error downloading file " << item.title << std::endl;
+                    std::cout << "    File URL: " << item.url << std::endl;
+                    std::cout << "    File title: " << item.title << std::endl;
+                    std::cout << "    File ext: " << item.ext << std::endl;
+                }
+
+                count++;
             }
-        } else {
-            std::cout << "Error downloading file " << item.title << std::endl;
         }
-
-        count++;
     }
 
     if (FileSystem::directory_is_empty(tempPath)) {

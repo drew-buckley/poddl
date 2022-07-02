@@ -31,6 +31,18 @@ struct Podcast {
     std::string name;
     std::string title;
     std::string ext;
+
+    bool operator<(const Podcast& pc) const {
+        return url < pc.url;
+    }
+
+    bool operator>(const Podcast& pc) const {
+        return url > pc.url;
+    }
+
+    bool operator==(const Podcast& pc) const {
+        return url == url;
+    }
 };
 
 class Parser {
